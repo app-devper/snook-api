@@ -82,7 +82,11 @@ func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositori
 			totalMins = 0
 		}
 		session.DurationMins = math.Round(totalMins*100) / 100
-		session.TableCharge = math.Round((totalMins/60)*session.RatePerHour*100) / 100
+		billableMins := totalMins
+		if billableMins < 60 {
+			billableMins = 60
+		}
+		session.TableCharge = math.Round((billableMins/60)*session.RatePerHour*100) / 100
 
 		orders, _ := orderEntity.GetOrdersBySessionId(sessionId)
 		foodTotal := 0.0
@@ -94,6 +98,18 @@ func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositori
 		if session.GrandTotal < 0 {
 			session.GrandTotal = 0
 		}
+
+		// Validate payment: total paid must cover grand total
+		payments, _ := paymentEntity.GetPaymentsBySessionId(sessionId)
+		paidTotal := 0.0
+		for _, p := range payments {
+			paidTotal += p.Amount
+		}
+		if paidTotal < session.GrandTotal {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, "payment incomplete, please collect payment before closing")
+			return
+		}
+
 		session.Status = "CLOSED"
 		userId := ctx.GetString("UserId")
 		session.UpdatedBy = userId

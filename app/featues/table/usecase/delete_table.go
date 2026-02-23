@@ -16,6 +16,15 @@ func DeleteTableById(tableEntity repositories.ITable) gin.HandlerFunc {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.TB_BAD_REQUEST_001, "invalid tableId")
 			return
 		}
+		table, err := tableEntity.GetTableById(tableId)
+		if err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TB_BAD_REQUEST_002, "table not found")
+			return
+		}
+		if table.Status == "IN_USE" {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TB_BAD_REQUEST_002, "cannot delete table while in use")
+			return
+		}
 		if err := tableEntity.DeleteTableById(tableId); err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.TB_BAD_REQUEST_002, err.Error())
 			return
