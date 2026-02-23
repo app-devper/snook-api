@@ -61,4 +61,10 @@ func ApplyTableSessionAPI(
 		middlewares.RequireSession(repository.Session),
 		usecase.TransferTable(repository.TableSession, repository.Table),
 	)
+
+	sessionRoute.POST("/:sessionId/apply-promotion",
+		middlewares.RequireAuthenticated(),
+		middlewares.RequireSession(repository.Session),
+		usecase.ApplyPromotionToSession(repository.TableSession, repository.Promotion),
+	)
 }

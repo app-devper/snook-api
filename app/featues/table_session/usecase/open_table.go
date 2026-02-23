@@ -209,6 +209,66 @@ func TransferTable(sessionEntity repositories.ITableSession, tableEntity reposit
 	}
 }
 
+func ApplyPromotionToSession(sessionEntity repositories.ITableSession, promotionEntity repositories.IPromotion) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		sessionId, err := primitive.ObjectIDFromHex(ctx.Param("sessionId"))
+		if err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_001, "invalid sessionId")
+			return
+		}
+		var req request.ApplyPromotion
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_001, err.Error())
+			return
+		}
+		promotionId, err := primitive.ObjectIDFromHex(req.PromotionId)
+		if err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_001, "invalid promotionId")
+			return
+		}
+		session, err := sessionEntity.GetTableSessionById(sessionId)
+		if err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, "session not found")
+			return
+		}
+		if session.Status == "CLOSED" {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, "session already closed")
+			return
+		}
+		promo, err := promotionEntity.GetPromotionById(promotionId)
+		if err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, "promotion not found")
+			return
+		}
+		// Calculate promotion discount based on type
+		promoDiscount := 0.0
+		elapsed := time.Since(session.StartTime).Minutes() - session.TotalPausedMins
+		if elapsed < 0 {
+			elapsed = 0
+		}
+		switch promo.Type {
+		case "FREE_HOURS":
+			if promo.PlayHours > 0 && (elapsed/60) >= promo.PlayHours {
+				promoDiscount = promo.FreeHours * session.RatePerHour
+			}
+		case "DISCOUNT_PCT":
+			currentCharge := (elapsed / 60) * session.RatePerHour
+			promoDiscount = math.Round(currentCharge*promo.DiscountPct) / 100
+		case "DISCOUNT_AMT":
+			promoDiscount = promo.DiscountAmt
+		}
+		session.PromotionId = &promotionId
+		session.PromotionName = promo.Name
+		session.PromotionDiscount = math.Round(promoDiscount*100) / 100
+		session.UpdatedBy = ctx.GetString("UserId")
+		if err := sessionEntity.UpdateTableSession(sessionId, session); err != nil {
+			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, err.Error())
+			return
+		}
+		ctx.JSON(http.StatusOK, session)
+	}
+}
+
 func GetTableSessions(sessionEntity repositories.ITableSession) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		startDate := ctx.Query("startDate")
