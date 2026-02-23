@@ -41,7 +41,7 @@ func ApplyTableSessionAPI(
 	sessionRoute.POST("/:sessionId/close",
 		middlewares.RequireAuthenticated(),
 		middlewares.RequireSession(repository.Session),
-		usecase.CloseTable(repository.TableSession, repository.Table, repository.TableOrder, repository.Payment),
+		usecase.CloseTable(repository.TableSession, repository.Table, repository.TableOrder, repository.Payment, repository.Promotion),
 	)
 
 	sessionRoute.POST("/:sessionId/pause",

@@ -54,7 +54,7 @@ func OpenTable(sessionEntity repositories.ITableSession, tableEntity repositorie
 	}
 }
 
-func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositories.ITable, orderEntity repositories.ITableOrder, paymentEntity repositories.IPayment) gin.HandlerFunc {
+func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositories.ITable, orderEntity repositories.ITableOrder, paymentEntity repositories.IPayment, promotionEntity repositories.IPromotion) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		sessionId, err := primitive.ObjectIDFromHex(ctx.Param("sessionId"))
 		if err != nil {
@@ -88,6 +88,25 @@ func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositori
 		}
 		session.TableCharge = math.Round((billableMins/60)*session.RatePerHour*100) / 100
 
+		// Recalculate promotion discount at close time
+		if session.PromotionId != nil {
+			promo, promoErr := promotionEntity.GetPromotionById(*session.PromotionId)
+			if promoErr == nil {
+				promoDiscount := 0.0
+				switch promo.Type {
+				case "FREE_HOURS":
+					if promo.PlayHours > 0 && (totalMins/60) >= promo.PlayHours {
+						promoDiscount = promo.FreeHours * session.RatePerHour
+					}
+				case "DISCOUNT_PCT":
+					promoDiscount = math.Round(session.TableCharge*promo.DiscountPct) / 100
+				case "DISCOUNT_AMT":
+					promoDiscount = promo.DiscountAmt
+				}
+				session.PromotionDiscount = math.Round(promoDiscount*100) / 100
+			}
+		}
+
 		orders, _ := orderEntity.GetOrdersBySessionId(sessionId)
 		foodTotal := 0.0
 		for _, o := range orders {
@@ -99,15 +118,33 @@ func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositori
 			session.GrandTotal = 0
 		}
 
-		// Validate payment: total paid must cover grand total
+		// Sum existing payments
 		payments, _ := paymentEntity.GetPaymentsBySessionId(sessionId)
 		paidTotal := 0.0
 		for _, p := range payments {
 			paidTotal += p.Amount
 		}
-		if paidTotal < session.GrandTotal {
-			errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, "payment incomplete, please collect payment before closing")
-			return
+
+		// Auto-create final payment for remaining balance
+		remaining := math.Round((session.GrandTotal-paidTotal)*100) / 100
+		if remaining > 0 {
+			payType := req.PaymentType
+			if payType == "" {
+				payType = "CASH"
+			}
+			userId := ctx.GetString("UserId")
+			_, payErr := paymentEntity.CreatePayment(entities.Payment{
+				SessionId:   sessionId,
+				Type:        payType,
+				Amount:      remaining,
+				Note:        req.PaymentNote,
+				CreatedBy:   userId,
+				CreatedDate: now,
+			})
+			if payErr != nil {
+				errcode.Abort(ctx, http.StatusBadRequest, errcode.TS_BAD_REQUEST_002, "failed to create payment: "+payErr.Error())
+				return
+			}
 		}
 
 		session.Status = "CLOSED"
