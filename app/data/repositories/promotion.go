@@ -67,7 +67,12 @@ func (entity *promotionEntity) GetActivePromotions(tableType string) ([]entities
 		"endDate":   bson.M{"$gte": now},
 	}
 	if tableType != "" {
-		filter["tableTypes"] = tableType
+		filter["$or"] = []bson.M{
+			{"tableTypes": tableType},
+			{"tableTypes": bson.M{"$exists": false}},
+			{"tableTypes": nil},
+			{"tableTypes": bson.A{}},
+		}
 	}
 	cursor, err := entity.col.Find(ctx, filter)
 	if err != nil {
