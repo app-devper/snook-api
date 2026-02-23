@@ -1,0 +1,83 @@
+package middlewares
+
+import (
+	"net/http"
+	"os"
+	"snook/app/core/errcode"
+	"snook/app/data/repositories"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
+)
+
+type AccessClaims struct {
+	Role     string `json:"role"`
+	System   string `json:"system"`
+	ClientId string `json:"clientId"`
+	jwt.RegisteredClaims
+}
+
+func RequireAuthenticated() gin.HandlerFunc {
+	jwtKey := []byte(os.Getenv("SECRET_KEY"))
+	clientId := os.Getenv("CLIENT_ID")
+	system := os.Getenv("SYSTEM")
+	return func(ctx *gin.Context) {
+		token := ctx.GetHeader("Authorization")
+		if token == "" {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_001, "missing authorization header")
+			return
+		}
+		jwtToken := strings.Split(token, "Bearer ")
+		if len(jwtToken) < 2 {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_001, "missing authorization header")
+			return
+		}
+		claims := &AccessClaims{}
+		tkn, err := jwt.ParseWithClaims(jwtToken[1], claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+		if err != nil {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_002, err.Error())
+			return
+		}
+		if tkn == nil || !tkn.Valid || claims.ID == "" {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_002, "token invalid")
+			return
+		}
+		if system != claims.System {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_003, "system invalid")
+			return
+		}
+		if clientId != claims.ClientId {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_004, "clientId invalid")
+			return
+		}
+
+		ctx.Set("SessionId", claims.ID)
+		ctx.Set("Role", claims.Role)
+		ctx.Set("System", claims.System)
+		ctx.Set("ClientId", claims.ClientId)
+
+		logrus.Info("SessionId: " + claims.ID)
+		logrus.Info("Role: " + claims.Role)
+		logrus.Info("System: " + claims.System)
+		logrus.Info("ClientId: " + claims.ClientId)
+		ctx.Next()
+	}
+}
+
+func RequireSession(sessionEntity repositories.ISession) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		sessionId := ctx.GetString("SessionId")
+		userId, err := sessionEntity.GetSessionById(sessionId)
+		if err != nil {
+			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_005, "session invalid")
+			return
+		}
+		ctx.Set("UserId", userId)
+		logrus.Info("UserId: " + userId)
+		ctx.Next()
+	}
+}
