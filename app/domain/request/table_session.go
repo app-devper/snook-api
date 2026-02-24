@@ -5,10 +5,11 @@ type OpenTable struct {
 }
 
 type CloseTable struct {
-	Discount    float64 `json:"discount"`
-	Note        string  `json:"note"`
-	PaymentType string  `json:"paymentType"`
-	PaymentNote string  `json:"paymentNote"`
+	TableCharge *float64 `json:"tableCharge"`
+	Discount    float64  `json:"discount"`
+	Note        string   `json:"note"`
+	PaymentType string   `json:"paymentType"`
+	PaymentNote string   `json:"paymentNote"`
 }
 
 type TransferTable struct {

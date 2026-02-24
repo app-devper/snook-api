@@ -82,11 +82,17 @@ func CloseTable(sessionEntity repositories.ITableSession, tableEntity repositori
 			totalMins = 0
 		}
 		session.DurationMins = math.Round(totalMins*100) / 100
-		billableMins := totalMins
-		if billableMins < 60 {
-			billableMins = 60
+
+		// Use frontend-provided tableCharge if available, otherwise calculate
+		if req.TableCharge != nil && *req.TableCharge > 0 {
+			session.TableCharge = math.Round(*req.TableCharge*100) / 100
+		} else {
+			billableMins := totalMins
+			if billableMins < 60 {
+				billableMins = 60
+			}
+			session.TableCharge = math.Round(math.Ceil(billableMins/60)*session.RatePerHour*100) / 100
 		}
-		session.TableCharge = math.Round((billableMins/60)*session.RatePerHour*100) / 100
 
 		// Recalculate promotion discount at close time
 		if session.PromotionId != nil {
@@ -305,7 +311,7 @@ func ApplyPromotionToSession(sessionEntity repositories.ITableSession, promotion
 				promoDiscount = promo.FreeHours * session.RatePerHour
 			}
 		case "DISCOUNT_PCT":
-			currentCharge := (elapsed / 60) * session.RatePerHour
+			currentCharge := math.Ceil(elapsed/60) * session.RatePerHour
 			promoDiscount = math.Round(currentCharge*promo.DiscountPct) / 100
 		case "DISCOUNT_AMT":
 			promoDiscount = promo.DiscountAmt
