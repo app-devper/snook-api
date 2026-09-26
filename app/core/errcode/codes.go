@@ -7,6 +7,7 @@ const (
 	AU_UNAUTHORIZED_003 = "AU-401-003" // system mismatch
 	AU_UNAUTHORIZED_004 = "AU-401-004" // clientId mismatch
 	AU_UNAUTHORIZED_005 = "AU-401-005" // session invalid
+	AU_UNAVAILABLE_001  = "AU-503-001" // UM session store unavailable; retry, do not sign out
 )
 
 // ─── Table (TB) ─────────────────────────────────────────────────────────────

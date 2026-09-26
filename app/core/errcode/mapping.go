@@ -14,6 +14,7 @@ var codeMap = map[string]CodeInfo{
 	AU_UNAUTHORIZED_003: {http.StatusUnauthorized, "system mismatch"},
 	AU_UNAUTHORIZED_004: {http.StatusUnauthorized, "clientId mismatch"},
 	AU_UNAUTHORIZED_005: {http.StatusUnauthorized, "session invalid"},
+	AU_UNAVAILABLE_001:  {http.StatusServiceUnavailable, "identity service unavailable"},
 
 	// ─── Table (TB) ─────────────────────────────────────────────────────────
 	TB_BAD_REQUEST_001: {http.StatusBadRequest, "invalid request body"},

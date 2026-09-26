@@ -14,8 +14,10 @@ import (
 )
 
 type Resource struct {
-	SnookDb     *mongo.Database
-	RdDb        *redis.Client
+	SnookDb *mongo.Database
+	RdDb    *redis.Client
+	// RedisHost is the REDIS_HOST URL; UM's sessions live in the same Redis.
+	RedisHost   string
 	mongoClient *mongo.Client
 }
 
@@ -65,6 +67,7 @@ func InitResource() (*Resource, error) {
 	return &Resource{
 		SnookDb:     mongoClient.Database(snookDbName),
 		RdDb:        rdb,
+		RedisHost:   redisHost,
 		mongoClient: mongoClient,
 	}, nil
 }
