@@ -16,7 +16,7 @@ import (
 func ApplyPaymentAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("payments")
 
-	r.GET("/session/:sessionId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/session/:sessionId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		sessionId, err := primitive.ObjectIDFromHex(ctx.Param("sessionId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.PY_BAD_REQUEST_001, "invalid sessionId")
@@ -30,7 +30,7 @@ func ApplyPaymentAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, payments)
 	})
 
-	r.GET("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		startDate := ctx.DefaultQuery("startDate", time.Now().Format("2006-01-02"))
 		endDate := ctx.DefaultQuery("endDate", time.Now().Format("2006-01-02"))
 		start, _ := time.Parse("2006-01-02", startDate)
@@ -44,7 +44,7 @@ func ApplyPaymentAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, payments)
 	})
 
-	r.POST("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.POST("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		var req request.Payment
 		if err := ctx.ShouldBindJSON(&req); err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.PY_BAD_REQUEST_001, err.Error())
@@ -76,7 +76,7 @@ func ApplyPaymentAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusCreated, result)
 	})
 
-	r.DELETE("/:paymentId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.DELETE("/:paymentId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("paymentId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.PY_BAD_REQUEST_001, "invalid paymentId")

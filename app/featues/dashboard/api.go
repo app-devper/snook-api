@@ -14,7 +14,7 @@ import (
 func ApplyDashboardAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("dashboard")
 
-	r.GET("/summary", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/summary", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		startDate := ctx.DefaultQuery("startDate", time.Now().Format("2006-01-02"))
 		endDate := ctx.DefaultQuery("endDate", time.Now().Format("2006-01-02"))
 		start, _ := time.Parse("2006-01-02", startDate)
@@ -28,7 +28,7 @@ func ApplyDashboardAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, summary)
 	})
 
-	r.GET("/daily-chart", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/daily-chart", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		startDate := ctx.DefaultQuery("startDate", time.Now().AddDate(0, 0, -30).Format("2006-01-02"))
 		endDate := ctx.DefaultQuery("endDate", time.Now().Format("2006-01-02"))
 		start, _ := time.Parse("2006-01-02", startDate)
@@ -42,7 +42,7 @@ func ApplyDashboardAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, chart)
 	})
 
-	r.GET("/low-stock", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/low-stock", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		threshold := 10
 		if t := ctx.Query("threshold"); t != "" {
 			if v, err := strconv.Atoi(t); err == nil {

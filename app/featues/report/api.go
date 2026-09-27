@@ -14,7 +14,7 @@ import (
 func ApplyReportAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("reports")
 
-	r.GET("/revenue", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/revenue", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		startDate := ctx.Query("startDate")
 		endDate := ctx.Query("endDate")
 		if startDate == "" || endDate == "" {
@@ -65,7 +65,7 @@ func ApplyReportAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		})
 	})
 
-	r.GET("/revenue/by-table/:tableId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/revenue/by-table/:tableId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		tableId, err := primitive.ObjectIDFromHex(ctx.Param("tableId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.RP_BAD_REQUEST_001, "invalid tableId")

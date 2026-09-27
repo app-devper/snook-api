@@ -15,56 +15,47 @@ func ApplyTableSessionAPI(
 	sessionRoute := route.Group("sessions")
 
 	sessionRoute.GET("",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.GetTableSessions(repository.TableSession),
 	)
 
 	sessionRoute.GET("/:sessionId",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.GetTableSessionById(repository.TableSession, repository.TableOrder, repository.Payment),
 	)
 
 	sessionRoute.GET("/table/:tableId/active",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.GetActiveSessionByTableId(repository.TableSession),
 	)
 
 	sessionRoute.POST("/open",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.OpenTable(repository.TableSession, repository.Table),
 	)
 
 	sessionRoute.POST("/:sessionId/close",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.CloseTable(repository.TableSession, repository.Table, repository.TableOrder, repository.Payment, repository.Promotion),
 	)
 
 	sessionRoute.POST("/:sessionId/pause",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.PauseTable(repository.TableSession),
 	)
 
 	sessionRoute.POST("/:sessionId/resume",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.ResumeTable(repository.TableSession),
 	)
 
 	sessionRoute.POST("/:sessionId/transfer",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.TransferTable(repository.TableSession, repository.Table),
 	)
 
 	sessionRoute.POST("/:sessionId/apply-promotion",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.ApplyPromotionToSession(repository.TableSession, repository.Promotion),
 	)
 }
