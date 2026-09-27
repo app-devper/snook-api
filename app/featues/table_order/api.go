@@ -15,7 +15,7 @@ import (
 func ApplyTableOrderAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("table-orders")
 
-	r.GET("/session/:sessionId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/session/:sessionId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		sessionId, err := primitive.ObjectIDFromHex(ctx.Param("sessionId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.TO_BAD_REQUEST_001, "invalid sessionId")
@@ -29,7 +29,7 @@ func ApplyTableOrderAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, orders)
 	})
 
-	r.POST("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.POST("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		var req request.TableOrder
 		if err := ctx.ShouldBindJSON(&req); err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.TO_BAD_REQUEST_001, err.Error())
@@ -65,7 +65,7 @@ func ApplyTableOrderAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusCreated, result)
 	})
 
-	r.DELETE("/:orderId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.DELETE("/:orderId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		orderId, err := primitive.ObjectIDFromHex(ctx.Param("orderId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.TO_BAD_REQUEST_001, "invalid orderId")

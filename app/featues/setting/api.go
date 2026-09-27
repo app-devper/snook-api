@@ -2,20 +2,20 @@ package setting
 
 import (
 	"net/http"
-	"snook/app/core/constant"
 	"snook/app/core/errcode"
 	"snook/app/data/entities"
 	"snook/app/domain"
 	"snook/app/domain/request"
 	"snook/middlewares"
 
+	"github.com/app-devper/um-api/sessionclient"
 	"github.com/gin-gonic/gin"
 )
 
 func ApplySettingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("settings")
 
-	r.GET("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		s, err := repository.Setting.GetSetting()
 		if err != nil {
 			ctx.JSON(http.StatusOK, entities.Setting{})
@@ -24,8 +24,8 @@ func ApplySettingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, s)
 	})
 
-	r.PUT("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	r.PUT("", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			var req request.Setting
 			if err := ctx.ShouldBindJSON(&req); err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.SE_BAD_REQUEST_001, err.Error())

@@ -2,88 +2,48 @@ package middlewares
 
 import (
 	"errors"
-	"net/http"
 	"os"
 	"snook/app/core/errcode"
-	"snook/app/data/repositories"
-	"strings"
 
 	"github.com/app-devper/um-api/sessionclient"
+	"github.com/app-devper/um-api/sessionclient/ginauth"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
 )
 
-type AccessClaims struct {
-	Role     string `json:"role"`
-	System   string `json:"system"`
-	ClientId string `json:"clientId"`
-	jwt.RegisteredClaims
+// NewAuth verifies UM access tokens for snook: SYSTEM and CLIENT_ID pin the
+// token, and the session is confirmed in UM's Redis at redisHost
+// (um-api ADR-0005). It fails when any of them is missing.
+func NewAuth(redisHost string) (*ginauth.Auth, error) {
+	store, err := sessionclient.RedisStoreFor(redisHost)
+	if err != nil {
+		return nil, err
+	}
+	return NewAuthWithStore(store)
 }
 
-func RequireAuthenticated() gin.HandlerFunc {
-	jwtKey := []byte(os.Getenv("SECRET_KEY"))
+// NewAuthWithStore is NewAuth with UM's session store supplied, for tests.
+func NewAuthWithStore(store sessionclient.Store) (*ginauth.Auth, error) {
 	clientId := os.Getenv("CLIENT_ID")
-	system := os.Getenv("SYSTEM")
-	return func(ctx *gin.Context) {
-		token := ctx.GetHeader("Authorization")
-		if token == "" {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_001, "missing authorization header")
-			return
-		}
-		jwtToken := strings.Split(token, "Bearer ")
-		if len(jwtToken) < 2 {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_001, "missing authorization header")
-			return
-		}
-		claims := &AccessClaims{}
-		tkn, err := jwt.ParseWithClaims(jwtToken[1], claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
-		})
-		if err != nil {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_002, err.Error())
-			return
-		}
-		if tkn == nil || !tkn.Valid || claims.ID == "" {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_002, "token invalid")
-			return
-		}
-		if system != claims.System {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_003, "system invalid")
-			return
-		}
-		if clientId != claims.ClientId {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_004, "clientId invalid")
-			return
-		}
-
-		ctx.Set("SessionId", claims.ID)
-		ctx.Set("Role", claims.Role)
-		ctx.Set("System", claims.System)
-		ctx.Set("ClientId", claims.ClientId)
-
-		logrus.Info("SessionId: " + claims.ID)
-		logrus.Info("Role: " + claims.Role)
-		logrus.Info("System: " + claims.System)
-		logrus.Info("ClientId: " + claims.ClientId)
-		ctx.Next()
+	if clientId == "" {
+		return nil, errors.New("missing required env: CLIENT_ID")
 	}
+	verifier, err := sessionclient.NewVerifier(sessionclient.Config{
+		SecretKey: os.Getenv("SECRET_KEY"),
+		System:    os.Getenv("SYSTEM"),
+		ClientID:  clientId,
+		Store:     store,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ginauth.New(verifier, func(ctx *gin.Context, e *sessionclient.Error) {
+		errcode.Abort(ctx, e.Status, e.Code, e.Message)
+	}), nil
 }
 
-func RequireSession(sessionEntity repositories.ISession) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		userId, err := sessionEntity.Authorize(ctx.Request.Context(),
-			ctx.GetString("SessionId"), ctx.GetString("System"), ctx.Request.Method)
-		if errors.Is(err, sessionclient.ErrUnavailable) {
-			errcode.Abort(ctx, http.StatusServiceUnavailable, errcode.AU_UNAVAILABLE_001, "identity service unavailable")
-			return
-		}
-		if err != nil {
-			errcode.Abort(ctx, http.StatusUnauthorized, errcode.AU_UNAUTHORIZED_005, "session invalid")
-			return
-		}
-		ctx.Set("UserId", userId)
-		logrus.Info("UserId: " + userId)
-		ctx.Next()
-	}
+// RequireSession admits a caller with a live UM session. Every snook route
+// uses the default outage policy: while UM is unreachable a read may continue
+// with the session last confirmed for its token, and writes wait.
+func RequireSession(auth *ginauth.Auth) gin.HandlerFunc {
+	return auth.Require(sessionclient.ReadOnlyWithLastGood)
 }

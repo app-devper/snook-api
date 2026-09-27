@@ -1,12 +1,14 @@
 package domain
 
 import (
+	"github.com/app-devper/um-api/sessionclient/ginauth"
 	"snook/app/data/repositories"
 	"snook/db"
 )
 
 type Repository struct {
-	Session      repositories.ISession
+	// Auth verifies UM tokens and sessions; set by the app at startup.
+	Auth         *ginauth.Auth
 	Table        repositories.ITable
 	TableSession repositories.ITableSession
 	Booking      repositories.IBooking
@@ -22,7 +24,6 @@ type Repository struct {
 
 func InitRepository(resource *db.Resource) *Repository {
 	return &Repository{
-		Session:      repositories.NewSessionEntity(resource),
 		Table:        repositories.NewTableEntity(resource),
 		TableSession: repositories.NewTableSessionEntity(resource),
 		Booking:      repositories.NewBookingEntity(resource),

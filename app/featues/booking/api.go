@@ -16,7 +16,7 @@ import (
 func ApplyBookingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("bookings")
 
-	r.GET("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		startDate := ctx.DefaultQuery("startDate", time.Now().Format("2006-01-02"))
 		endDate := ctx.DefaultQuery("endDate", time.Now().Format("2006-01-02"))
 		start, _ := time.Parse("2006-01-02", startDate)
@@ -30,7 +30,7 @@ func ApplyBookingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, bookings)
 	})
 
-	r.GET("/:bookingId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/:bookingId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("bookingId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.BK_BAD_REQUEST_001, "invalid bookingId")
@@ -44,7 +44,7 @@ func ApplyBookingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, booking)
 	})
 
-	r.POST("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.POST("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		var req request.Booking
 		if err := ctx.ShouldBindJSON(&req); err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.BK_BAD_REQUEST_001, err.Error())
@@ -72,7 +72,7 @@ func ApplyBookingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusCreated, result)
 	})
 
-	r.PUT("/:bookingId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.PUT("/:bookingId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("bookingId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.BK_BAD_REQUEST_001, "invalid bookingId")
@@ -112,7 +112,7 @@ func ApplyBookingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	r.PATCH("/:bookingId/status", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.PATCH("/:bookingId/status", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("bookingId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.BK_BAD_REQUEST_001, "invalid bookingId")
@@ -130,7 +130,7 @@ func ApplyBookingAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	r.DELETE("/:bookingId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.DELETE("/:bookingId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("bookingId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.BK_BAD_REQUEST_001, "invalid bookingId")
