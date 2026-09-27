@@ -47,6 +47,22 @@ func (app Routes) StartGin() {
 
 	repository := domain.InitRepository(resource)
 
+	repository.Auth, err = middlewares.NewAuth(resource.RedisHost)
+	if err != nil {
+		logrus.Fatal("UM token verification: ", err)
+	}
+	applyFeatureAPIs(publicRoute, repository)
+
+	r.NoRoute(middlewares.NoRoute())
+
+	err = r.Run(":" + os.Getenv("PORT"))
+	if err != nil {
+		logrus.Error(err)
+	}
+}
+
+// applyFeatureAPIs registers every business route under /api/snook/v1.
+func applyFeatureAPIs(publicRoute *gin.RouterGroup, repository *domain.Repository) {
 	table.ApplyTableAPI(publicRoute, repository)
 	table_session.ApplyTableSessionAPI(publicRoute, repository)
 	booking.ApplyBookingAPI(publicRoute, repository)
@@ -59,11 +75,4 @@ func (app Routes) StartGin() {
 	setting.ApplySettingAPI(publicRoute, repository)
 	dashboard.ApplyDashboardAPI(publicRoute, repository)
 	report.ApplyReportAPI(publicRoute, repository)
-
-	r.NoRoute(middlewares.NoRoute())
-
-	err = r.Run(":" + os.Getenv("PORT"))
-	if err != nil {
-		logrus.Error(err)
-	}
 }

@@ -1,11 +1,11 @@
 package table
 
 import (
-	"snook/app/core/constant"
 	"snook/app/domain"
 	"snook/app/featues/table/usecase"
 	"snook/middlewares"
 
+	"github.com/app-devper/um-api/sessionclient"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,36 +16,31 @@ func ApplyTableAPI(
 	tableRoute := route.Group("tables")
 
 	tableRoute.GET("",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
+		middlewares.RequireSession(repository.Auth),
 		usecase.GetTables(repository.Table),
 	)
 
 	tableRoute.POST("",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN),
+		middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin),
 		usecase.CreateTable(repository.Table),
 	)
 
 	tableRoute.PUT("/:tableId",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN),
+		middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin),
 		usecase.UpdateTableById(repository.Table),
 	)
 
 	tableRoute.PATCH("/:tableId/status",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN),
+		middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin),
 		usecase.UpdateTableStatus(repository.Table),
 	)
 
 	tableRoute.DELETE("/:tableId",
-		middlewares.RequireAuthenticated(),
-		middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN),
+		middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin),
 		usecase.DeleteTableById(repository.Table),
 	)
 }

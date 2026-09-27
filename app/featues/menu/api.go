@@ -2,7 +2,6 @@ package menu
 
 import (
 	"net/http"
-	"snook/app/core/constant"
 	"snook/app/core/errcode"
 	"snook/app/data/entities"
 	"snook/app/domain"
@@ -10,6 +9,7 @@ import (
 	"snook/middlewares"
 	"strconv"
 
+	"github.com/app-devper/um-api/sessionclient"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -18,7 +18,7 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	// ─── Categories ─────────────────────────────────
 	catRoute := route.Group("menu-categories")
 
-	catRoute.GET("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	catRoute.GET("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		cats, err := repository.MenuCategory.GetMenuCategories()
 		if err != nil {
 			errcode.Abort(ctx, http.StatusInternalServerError, errcode.MC_INTERNAL_001, err.Error())
@@ -27,8 +27,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, cats)
 	})
 
-	catRoute.POST("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	catRoute.POST("", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			var req request.MenuCategory
 			if err := ctx.ShouldBindJSON(&req); err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MC_BAD_REQUEST_001, err.Error())
@@ -43,8 +43,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 			ctx.JSON(http.StatusCreated, result)
 		})
 
-	catRoute.PUT("/:categoryId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	catRoute.PUT("/:categoryId", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			id, err := primitive.ObjectIDFromHex(ctx.Param("categoryId"))
 			if err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MC_BAD_REQUEST_001, "invalid categoryId")
@@ -63,8 +63,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 			ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 		})
 
-	catRoute.DELETE("/:categoryId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	catRoute.DELETE("/:categoryId", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			id, err := primitive.ObjectIDFromHex(ctx.Param("categoryId"))
 			if err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MC_BAD_REQUEST_001, "invalid categoryId")
@@ -80,7 +80,7 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	// ─── Menu Items ─────────────────────────────────
 	itemRoute := route.Group("menu-items")
 
-	itemRoute.GET("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	itemRoute.GET("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		category := ctx.Query("category")
 		items, err := repository.MenuItem.GetMenuItems(category)
 		if err != nil {
@@ -90,7 +90,7 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, items)
 	})
 
-	itemRoute.GET("/:itemId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	itemRoute.GET("/:itemId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("itemId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.MI_BAD_REQUEST_001, "invalid itemId")
@@ -104,8 +104,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, item)
 	})
 
-	itemRoute.POST("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	itemRoute.POST("", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			var req request.MenuItem
 			if err := ctx.ShouldBindJSON(&req); err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MI_BAD_REQUEST_001, err.Error())
@@ -128,8 +128,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 			ctx.JSON(http.StatusCreated, result)
 		})
 
-	itemRoute.PUT("/:itemId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	itemRoute.PUT("/:itemId", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			id, err := primitive.ObjectIDFromHex(ctx.Param("itemId"))
 			if err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MI_BAD_REQUEST_001, "invalid itemId")
@@ -152,8 +152,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 			ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 		})
 
-	itemRoute.DELETE("/:itemId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	itemRoute.DELETE("/:itemId", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			id, err := primitive.ObjectIDFromHex(ctx.Param("itemId"))
 			if err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MI_BAD_REQUEST_001, "invalid itemId")
@@ -166,8 +166,8 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 			ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 		})
 
-	itemRoute.PATCH("/:itemId/quantity", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session),
-		middlewares.RequireAuthorization(constant.SUPER, constant.ADMIN), func(ctx *gin.Context) {
+	itemRoute.PATCH("/:itemId/quantity", middlewares.RequireSession(repository.Auth),
+		repository.Auth.AtLeast(sessionclient.RoleAdmin), func(ctx *gin.Context) {
 			id, err := primitive.ObjectIDFromHex(ctx.Param("itemId"))
 			if err != nil {
 				errcode.Abort(ctx, http.StatusBadRequest, errcode.MI_BAD_REQUEST_001, "invalid itemId")
@@ -185,7 +185,7 @@ func ApplyMenuAPI(route *gin.RouterGroup, repository *domain.Repository) {
 			ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 		})
 
-	itemRoute.GET("/low-stock", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	itemRoute.GET("/low-stock", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		threshold := 10
 		if t := ctx.Query("threshold"); t != "" {
 			if v, err := strconv.Atoi(t); err == nil {

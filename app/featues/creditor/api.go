@@ -15,7 +15,7 @@ import (
 func ApplyCreditorAPI(route *gin.RouterGroup, repository *domain.Repository) {
 	r := route.Group("creditors")
 
-	r.GET("", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		status := ctx.Query("status")
 		creditors, err := repository.Creditor.GetCreditors(status)
 		if err != nil {
@@ -25,7 +25,7 @@ func ApplyCreditorAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, creditors)
 	})
 
-	r.GET("/:creditorId", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/:creditorId", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("creditorId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.CR_BAD_REQUEST_001, "invalid creditorId")
@@ -39,7 +39,7 @@ func ApplyCreditorAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, creditorRecord)
 	})
 
-	r.GET("/:creditorId/payments", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.GET("/:creditorId/payments", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("creditorId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.CR_BAD_REQUEST_001, "invalid creditorId")
@@ -53,7 +53,7 @@ func ApplyCreditorAPI(route *gin.RouterGroup, repository *domain.Repository) {
 		ctx.JSON(http.StatusOK, payments)
 	})
 
-	r.POST("/:creditorId/pay", middlewares.RequireAuthenticated(), middlewares.RequireSession(repository.Session), func(ctx *gin.Context) {
+	r.POST("/:creditorId/pay", middlewares.RequireSession(repository.Auth), func(ctx *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(ctx.Param("creditorId"))
 		if err != nil {
 			errcode.Abort(ctx, http.StatusBadRequest, errcode.CR_BAD_REQUEST_001, "invalid creditorId")
